@@ -136,7 +136,7 @@ function createSolvedState() {
     rawArray[rawArray.length - 1] = 0;
 }
 
-function shuffle() {
+function scramble() {
     if (isSolving) return;
     createSolvedState();
     let zeroIndex: number = rawArray.length - 1;
