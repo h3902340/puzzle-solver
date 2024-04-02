@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Puzzle Solver</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body style="background-color:rgb(0, 0, 0);">
+    <div id="wrapper">
+        <Canvas id="mainCanvas"></Canvas>
+        <div style="margin-top: 5px;">
+            <div>
+                <button class="button" onclick="shuffle()">Suffle</button>
+                <button class="button" onclick="solve()">Solve</button>
+                <button class="button" onclick="restore()">Restore</button>
+            </div>
+            <div style="display: flex; flex-direction: row;">
+                <p class="label">Problem Width: </p><input class="input" id="problemWidth" type="number" value="3"
+                    oninput="onInputWidth(this.value)">
+            </div>
+            <div style="display: flex; flex-direction: row;">
+                <p class="label">Problem Height: </p><input class="input" id="problemHeight" type="number" value="3"
+                    oninput="onInputHeight(this.value)">
+            </div>
+            <div style="display: flex; flex-direction: row;">
+                <p class="label">Scramble Steps: </p><input class="input" id="scrambleStep" type="number" value="100"
+                    oninput="onInputScrambleStep(this.value)">
+            </div>
+            <div style="display: flex; flex-direction: row;">
+                <p class="label">Timeout: </p><input class="input" id="timeout" type="number" value="10"
+                    oninput="onInputTimeout(this.value)">
+            </div>
+            <p class="label">Optimal Moves: <span id="moveText"></span></p>
+            <p class="label">Elapsed Time: <span id="elapsedTime"></span></p>
+            <p class="label">Nodes Generated: <span id="nodeGenerated"></span></p>
+        </div>
+    </div>
+    <script src="index.js"></script>
+</body>
+
+</html>
