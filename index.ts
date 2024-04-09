@@ -16,7 +16,6 @@ type Vertex = {
     f: number,
     boardState: number[][],
     parent: Vertex | null,
-    isEnd: boolean
 }
 
 let canvas: HTMLCanvasElement = document.getElementById("mainCanvas") as HTMLCanvasElement;
@@ -36,6 +35,7 @@ let solution: number[][][] = [];
 let nodeCount: number = 0;
 let elapsedTime: number = -1;
 let timeout: number = 10;
+let isTimeout: boolean = false;
 
 function onInputWidth(value: any) {
     problemWidth = Number(value);
@@ -187,7 +187,7 @@ function restore() {
 }
 
 // use heuristic function to find the optimal solution for the 8-puzzle
-function h(boardState: number[][]): number {
+function heuristic(boardState: number[][]): number {
     let cost: number = 0;
     for (let i = 0; i < boardState.length; i++) {
         for (let j = 0; j < boardState[i].length; j++) {
@@ -197,10 +197,23 @@ function h(boardState: number[][]): number {
             let yPos = Math.floor((boardState[i][j] - 1) / boardState[i].length);
             cost += Math.abs(xPos - j) + Math.abs(yPos - i);
             // check for linear conflicts
-            let correctPiece = boardState[i].length * i + j + 1;
-            if (boardState[i][j] == correctPiece) continue;
-            if (boardState[yPos][xPos] == correctPiece && (xPos == j || yPos == i)) {
-                cost += 1;
+            if (xPos == j && yPos == i) continue;
+            if (xPos == j) {
+                for (let k = i + 1; k <= yPos; k++) {
+                    let xPos2 = (boardState[k][j] - 1) % boardState[k].length;
+                    let yPos2 = Math.floor((boardState[k][j] - 1) / boardState[k].length);
+                    if (xPos2 == xPos && yPos2 < yPos) {
+                        cost += 2;
+                    }
+                }
+            } else if (yPos == i) {
+                for (let k = j + 1; k <= xPos; k++) {
+                    let xPos2 = (boardState[i][k] - 1) % boardState[i].length;
+                    let yPos2 = Math.floor((boardState[i][k] - 1) / boardState[i].length);
+                    if (yPos2 == yPos && xPos2 < xPos) {
+                        cost += 2;
+                    }
+                }
             }
         }
     }
@@ -221,7 +234,7 @@ function copyBoardState(boardState: number[][]): number[][] {
 
 function solveByAStar() {
     let start = new Date();
-    let rootHValue: number = h(initialState);
+    let rootHValue: number = heuristic(initialState);
     let root: Vertex = {
         position: {
             x: -1,
@@ -231,7 +244,6 @@ function solveByAStar() {
         f: rootHValue,
         boardState: initialState,
         parent: null,
-        isEnd: rootHValue == 0,
     };
 
     let rootPositionFound: boolean = false;
@@ -251,89 +263,28 @@ function solveByAStar() {
 
     // min heap
     let openList: Vertex[] = [root];
-    let closedList: Map<string, boolean> = new Map();
+    let closedList: Set<string> = new Set();
     // hash set
-    let smallestLeaf: Vertex | null = null;
+    let smallestNode: Vertex = openList[0];
     nodeCount = 0;
     while (true) {
-        smallestLeaf = openList[0];
-        if (!smallestLeaf) break;
-        if (smallestLeaf.isEnd) break;
+        smallestNode = openList[0];
+        if (smallestNode.f == smallestNode.g) break;
         let children: Vertex[] = [];
-        if (smallestLeaf.position.x > 0 && (!smallestLeaf.parent || smallestLeaf.parent.position.x != smallestLeaf.position.x - 1)) {
-            let boardState: number[][] = copyBoardState(smallestLeaf.boardState);
-            boardState[smallestLeaf.position.y][smallestLeaf.position.x] = boardState[smallestLeaf.position.y][smallestLeaf.position.x - 1];
-            boardState[smallestLeaf.position.y][smallestLeaf.position.x - 1] = 0;
-            let hValue: number = h(boardState);
+        let neighborBoards = getNeighborBoardList(smallestNode);
+        for (let i = 0; i < neighborBoards.length; i++) {
+            let hValue: number = heuristic(neighborBoards[i].board);
             let child: Vertex = {
-                position: {
-                    x: smallestLeaf.position.x - 1,
-                    y: smallestLeaf.position.y
-                },
-                g: smallestLeaf.g + 1,
-                f: smallestLeaf.g + 1 + hValue,
-                boardState: boardState,
-                parent: smallestLeaf,
-                isEnd: hValue == 0
-            }
-            children.push(child);
-        }
-        if (smallestLeaf.position.x < problemWidth - 1 && (!smallestLeaf.parent || smallestLeaf.parent.position.x != smallestLeaf.position.x + 1)) {
-            let boardState: number[][] = copyBoardState(smallestLeaf.boardState);
-            boardState[smallestLeaf.position.y][smallestLeaf.position.x] = boardState[smallestLeaf.position.y][smallestLeaf.position.x + 1];
-            boardState[smallestLeaf.position.y][smallestLeaf.position.x + 1] = 0;
-            let hValue: number = h(boardState);
-            let child: Vertex = {
-                position: {
-                    x: smallestLeaf.position.x + 1,
-                    y: smallestLeaf.position.y
-                },
-                g: smallestLeaf.g + 1,
-                f: smallestLeaf.g + 1 + hValue,
-                boardState: boardState,
-                parent: smallestLeaf,
-                isEnd: hValue == 0,
-            }
-            children.push(child);
-        }
-        if (smallestLeaf.position.y > 0 && (!smallestLeaf.parent || smallestLeaf.parent.position.y != smallestLeaf.position.y - 1)) {
-            let boardState: number[][] = copyBoardState(smallestLeaf.boardState);
-            boardState[smallestLeaf.position.y][smallestLeaf.position.x] = boardState[smallestLeaf.position.y - 1][smallestLeaf.position.x];
-            boardState[smallestLeaf.position.y - 1][smallestLeaf.position.x] = 0;
-            let hValue: number = h(boardState);
-            let child: Vertex = {
-                position: {
-                    x: smallestLeaf.position.x,
-                    y: smallestLeaf.position.y - 1
-                },
-                g: smallestLeaf.g + 1,
-                f: smallestLeaf.g + 1 + hValue,
-                boardState: boardState,
-                parent: smallestLeaf,
-                isEnd: hValue == 0
-            }
-            children.push(child);
-        }
-        if (smallestLeaf.position.y < problemHeight - 1 && (!smallestLeaf.parent || smallestLeaf.parent.position.y != smallestLeaf.position.y + 1)) {
-            let boardState: number[][] = copyBoardState(smallestLeaf.boardState);
-            boardState[smallestLeaf.position.y][smallestLeaf.position.x] = boardState[smallestLeaf.position.y + 1][smallestLeaf.position.x];
-            boardState[smallestLeaf.position.y + 1][smallestLeaf.position.x] = 0;
-            let hValue: number = h(boardState);
-            let child: Vertex = {
-                position: {
-                    x: smallestLeaf.position.x,
-                    y: smallestLeaf.position.y + 1
-                },
-                g: smallestLeaf.g + 1,
-                f: smallestLeaf.g + 1 + hValue,
-                boardState: boardState,
-                parent: smallestLeaf,
-                isEnd: hValue == 0
-            }
+                position: neighborBoards[i].position,
+                g: smallestNode.g + 1,
+                f: smallestNode.g + 1 + hValue,
+                boardState: neighborBoards[i].board,
+                parent: smallestNode,
+            };
             children.push(child);
         }
 
-        closedList.set(serializeBoardState(smallestLeaf.boardState), true);
+        closedList.add(serializeBoardState(smallestNode.boardState));
         openList[0] = openList[openList.length - 1];
         openList.pop();
         let currentIndex: number = 0;
@@ -378,15 +329,69 @@ function solveByAStar() {
 
         if (new Date().getTime() - start.getTime() > timeout * 1000) {
             alert('Timeout!');
+            isTimeout = true;
             break;
         }
     }
     nodeCount = closedList.size + openList.length;
-    solution = [smallestLeaf.boardState];
-    while (smallestLeaf.parent) {
-        solution = [smallestLeaf.parent.boardState].concat(solution);
-        smallestLeaf = smallestLeaf.parent;
+    solution = [smallestNode.boardState];
+    while (smallestNode.parent) {
+        solution = [smallestNode.parent.boardState].concat(solution);
+        smallestNode = smallestNode.parent;
     }
+}
+
+function getNeighborBoardList(vertex: Vertex): { board: number[][], position: Position }[] {
+    let boardList: { board: number[][], position: Position }[] = [];
+    if (vertex.position.x > 0) {
+        let board = copyBoardState(vertex.boardState);
+        board[vertex.position.y][vertex.position.x] = board[vertex.position.y][vertex.position.x - 1];
+        board[vertex.position.y][vertex.position.x - 1] = 0;
+        boardList.push({
+            board: board,
+            position: {
+                x: vertex.position.x - 1,
+                y: vertex.position.y
+            }
+        });
+    }
+    if (vertex.position.x < vertex.boardState[0].length - 1) {
+        let board = copyBoardState(vertex.boardState);
+        board[vertex.position.y][vertex.position.x] = board[vertex.position.y][vertex.position.x + 1];
+        board[vertex.position.y][vertex.position.x + 1] = 0;
+        boardList.push({
+            board: board,
+            position: {
+                x: vertex.position.x + 1,
+                y: vertex.position.y
+            }
+        });
+    }
+    if (vertex.position.y > 0) {
+        let board = copyBoardState(vertex.boardState);
+        board[vertex.position.y][vertex.position.x] = board[vertex.position.y - 1][vertex.position.x];
+        board[vertex.position.y - 1][vertex.position.x] = 0;
+        boardList.push({
+            board: board,
+            position: {
+                x: vertex.position.x,
+                y: vertex.position.y - 1
+            }
+        });
+    }
+    if (vertex.position.y < vertex.boardState.length - 1) {
+        let board = copyBoardState(vertex.boardState);
+        board[vertex.position.y][vertex.position.x] = board[vertex.position.y + 1][vertex.position.x];
+        board[vertex.position.y + 1][vertex.position.x] = 0;
+        boardList.push({
+            board: board,
+            position: {
+                x: vertex.position.x,
+                y: vertex.position.y + 1
+            }
+        });
+    }
+    return boardList;
 }
 
 function serializeBoardState(board: number[][]): string {
@@ -410,21 +415,27 @@ async function sleep(ms: number): Promise<void> {
 async function solve() {
     if (isSolving) return;
     isSolving = true;
+    isTimeout = false;
     if (!isSolved) {
         let start = new Date();
         solveByAStar();
         elapsedTime = new Date().getTime() - start.getTime();
-        isSolved = true;
+        if (!isTimeout) {
+            isSolved = true;
+        }
     }
 
     document.getElementById("moveText")!.innerHTML = (solution.length - 1).toString();
     document.getElementById("elapsedTime")!.innerHTML = elapsedTime + ' ms';
     document.getElementById("nodeGenerated")!.innerHTML = nodeCount.toString();
 
-    for (let k = 1; k < solution.length; k++) {
-        drawBoard(solution[k]);
-        await sleep(200);
+    if (!isTimeout) {
+        for (let k = 1; k < solution.length; k++) {
+            drawBoard(solution[k]);
+            await sleep(200);
+        }
     }
+
     isSolving = false;
 }
 
