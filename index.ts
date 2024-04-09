@@ -273,6 +273,9 @@ function solveByAStar() {
         let children: Vertex[] = [];
         let neighborBoards = getNeighborBoardList(smallestNode);
         for (let i = 0; i < neighborBoards.length; i++) {
+            if (smallestNode.parent && neighborBoards[i].position.x == smallestNode.parent.position.x && neighborBoards[i].position.y == smallestNode.parent.position.y) {
+                continue;
+            }
             let hValue: number = heuristic(neighborBoards[i].board);
             let child: Vertex = {
                 position: neighborBoards[i].position,

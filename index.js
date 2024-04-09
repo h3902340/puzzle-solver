@@ -254,6 +254,9 @@ function solveByAStar() {
         let children = [];
         let neighborBoards = getNeighborBoardList(smallestNode);
         for (let i = 0; i < neighborBoards.length; i++) {
+            if (smallestNode.parent && neighborBoards[i].position.x == smallestNode.parent.position.x && neighborBoards[i].position.y == smallestNode.parent.position.y) {
+                continue;
+            }
             let hValue = heuristic(neighborBoards[i].board);
             let child = {
                 position: neighborBoards[i].position,
