@@ -245,7 +245,7 @@ function solveByAStar() {
     }
 
     let openList: Vertex[] = [root];
-    let closedList: Vertex[] = [];
+    let closedList: Set<Vertex> = new Set();
     let smallestLeaf: Vertex = openList[0];
     while (true) {
         if (openList.length == 0) break;
@@ -338,27 +338,13 @@ function solveByAStar() {
             smallestLeaf.children.push(child);
         }
 
-        closedList.push(smallestLeaf);
+        closedList.add(smallestLeaf);
         openList.splice(openList.indexOf(smallestLeaf), 1);
         for (let k = 0; k < smallestLeaf.children.length; k++) {
-            for (let l = 0; l < closedList.length; l++) {
-                let isSame: boolean = true;
-                for (let i = 0; i < initialState.length; i++) {
-                    for (let j = 0; j < initialState[i].length; j++) {
-                        if (smallestLeaf.children[k].boardState[i][j] != closedList[l].boardState[i][j]) {
-                            isSame = false;
-                            break;
-                        }
-                    }
-                    if (!isSame) break;
-                }
-                if (isSame) {
-                    break;
-                }
-                if (l == closedList.length - 1) {
-                    openList.push(smallestLeaf.children[k]);
-                }
+            if (closedList.has(smallestLeaf.children[k])) {
+                break;
             }
+            openList.push(smallestLeaf.children[k]);
         }
 
         nodeCount += smallestLeaf.children.length;
