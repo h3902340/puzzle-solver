@@ -13,7 +13,6 @@ type Position = {
 type Vertex = {
     position: Position,
     g: number,
-    h: number,
     f: number,
     boardState: number[][],
     children: Vertex[],
@@ -31,7 +30,7 @@ let problemWidth: number = 3;
 let problemHeight: number = 3;
 let rawArray: number[] = [];
 let initialState: number[][] = [];
-let scrambleStep: number = 100;
+let scrambleStep: number = 3000;
 let isSolved: boolean = false;
 let isSolving: boolean = false;
 let solution: number[][][] = [];
@@ -221,7 +220,6 @@ function solveByAStar() {
             y: -1
         },
         g: 0,
-        h: rootHValue,
         f: rootHValue,
         boardState: initialState,
         children: [],
@@ -244,18 +242,14 @@ function solveByAStar() {
         if (rootPositionFound) break;
     }
 
+    // min heap
     let openList: Vertex[] = [root];
-    let closedList: Set<Vertex> = new Set();
-    let smallestLeaf: Vertex = openList[0];
+    // hash set
+    let closedList: Set<string> = new Set();
+    let smallestLeaf: Vertex | null = null;
     while (true) {
-        if (openList.length == 0) break;
         smallestLeaf = openList[0];
-        for (let i = 1; i < openList.length; i++) {
-            if (openList[i].f < smallestLeaf.f) {
-                smallestLeaf = openList[i];
-            }
-        }
-
+        if (!smallestLeaf) break;
         if (smallestLeaf.isEnd) break;
         if (smallestLeaf.position.x > 0) {
             let boardState: number[][] = copyBoardState(smallestLeaf.boardState);
@@ -268,7 +262,6 @@ function solveByAStar() {
                     y: smallestLeaf.position.y
                 },
                 g: smallestLeaf.g + 1,
-                h: hValue,
                 f: smallestLeaf.g + 1 + hValue,
                 boardState: boardState,
                 children: [],
@@ -288,7 +281,6 @@ function solveByAStar() {
                     y: smallestLeaf.position.y
                 },
                 g: smallestLeaf.g + 1,
-                h: hValue,
                 f: smallestLeaf.g + 1 + hValue,
                 boardState: boardState,
                 children: [],
@@ -308,7 +300,6 @@ function solveByAStar() {
                     y: smallestLeaf.position.y - 1
                 },
                 g: smallestLeaf.g + 1,
-                h: hValue,
                 f: smallestLeaf.g + 1 + hValue,
                 boardState: boardState,
                 children: [],
@@ -328,7 +319,6 @@ function solveByAStar() {
                     y: smallestLeaf.position.y + 1
                 },
                 g: smallestLeaf.g + 1,
-                h: hValue,
                 f: smallestLeaf.g + 1 + hValue,
                 boardState: boardState,
                 children: [],
@@ -338,27 +328,75 @@ function solveByAStar() {
             smallestLeaf.children.push(child);
         }
 
-        closedList.add(smallestLeaf);
-        openList.splice(openList.indexOf(smallestLeaf), 1);
-        for (let k = 0; k < smallestLeaf.children.length; k++) {
-            if (closedList.has(smallestLeaf.children[k])) {
+        closedList.add(serializeBoardState(smallestLeaf.boardState));
+        openList[0] = openList[openList.length - 1];
+        openList.pop();
+        let currentIndex: number = 0;
+        // delete min from the min heap
+        while (true) {
+            let leftChildIndex: number = currentIndex * 2 + 1;
+            let rightChildIndex: number = currentIndex * 2 + 2;
+            let smallerChildIndex: number = -1;
+            if (rightChildIndex < openList.length) {
+                smallerChildIndex = openList[leftChildIndex].f < openList[rightChildIndex].f ? leftChildIndex : rightChildIndex;
+            } else if (leftChildIndex < openList.length) {
+                smallerChildIndex = leftChildIndex;
+            } else {
                 break;
             }
-            openList.push(smallestLeaf.children[k]);
+            if (openList[currentIndex].f < openList[smallerChildIndex].f) {
+                break;
+            } else {
+                let temp = openList[currentIndex];
+                openList[currentIndex] = openList[smallerChildIndex];
+                openList[smallerChildIndex] = temp;
+                currentIndex = smallerChildIndex;
+            }
         }
-
-        nodeCount += smallestLeaf.children.length;
+        for (let k = 0; k < smallestLeaf.children.length; k++) {
+            if (closedList.has(serializeBoardState(smallestLeaf.children[k].boardState))) {
+                continue;
+            }
+            openList.push(smallestLeaf.children[k]);
+            let currentIndex = openList.length - 1;
+            while (true) {
+                if (currentIndex == 0) break;
+                let parentIndex = Math.floor((currentIndex - 1) * .5);
+                if (openList[currentIndex].f < openList[parentIndex].f) {
+                    let temp = openList[currentIndex];
+                    openList[currentIndex] = openList[parentIndex];
+                    openList[parentIndex] = temp;
+                    currentIndex = parentIndex;
+                } else {
+                    break;
+                }
+            }
+        }
         if (new Date().getTime() - start.getTime() > timeout * 1000) {
             alert('Timeout!');
             break;
         }
     }
-
+    nodeCount = closedList.size + openList.length;
     solution = [smallestLeaf.boardState];
     while (smallestLeaf.parent) {
         solution = [smallestLeaf.parent.boardState].concat(solution);
         smallestLeaf = smallestLeaf.parent;
     }
+}
+
+function serializeBoardState(board: number[][]): string {
+    let output = '';
+    for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].length; j++) {
+            if (i == board.length - 1 && j == board[i].length - 1) {
+                output += board[i][j];
+            } else {
+                output += board[i][j] + ',';
+            }
+        }
+    }
+    return output;
 }
 
 async function sleep(ms: number): Promise<void> {
