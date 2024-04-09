@@ -254,9 +254,17 @@ function solveByAStar() {
         let children = [];
         let neighborBoards = getNeighborBoardList(smallestNode);
         for (let i = 0; i < neighborBoards.length; i++) {
-            if (smallestNode.parent && neighborBoards[i].position.x == smallestNode.parent.position.x && neighborBoards[i].position.y == smallestNode.parent.position.y) {
-                continue;
+            let isRepeated = false;
+            let parent = smallestNode.parent;
+            while (parent) {
+                if (isBoardEqual(neighborBoards[i].board, parent.boardState)) {
+                    isRepeated = true;
+                    break;
+                }
+                parent = parent.parent;
             }
+            if (isRepeated)
+                continue;
             let hValue = heuristic(neighborBoards[i].board);
             let child = {
                 position: neighborBoards[i].position,
@@ -327,6 +335,15 @@ function solveByAStar() {
         solution = [smallestNode.parent.boardState].concat(solution);
         smallestNode = smallestNode.parent;
     }
+}
+function isBoardEqual(board1, board2) {
+    for (let i = 0; i < board1.length; i++) {
+        for (let j = 0; j < board1[i].length; j++) {
+            if (board1[i][j] != board2[i][j])
+                return false;
+        }
+    }
+    return true;
 }
 function getNeighborBoardList(vertex) {
     let boardList = [];
