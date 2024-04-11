@@ -26,6 +26,8 @@ let nodeCount = 0;
 let elapsedTime = -1;
 let timeout = 10;
 let isTimeout = false;
+let center = { x: -1, y: -1 };
+let topLeft = { x: -1, y: -1 };
 function onInputWidth(value) {
     problemWidth = Number(value);
     if (problemWidth < 1) {
@@ -71,19 +73,19 @@ function drawText(text, startPosition, color, font, size) {
     ctx.fillText(text, startPosition.x, startPosition.y + 4);
 }
 function drawBoard(board) {
-    ctx.canvas.width = margin * 2 + problemWidth * cardWidth + (problemWidth - 1) * cardPadding;
-    ctx.canvas.height = margin * 2 + problemHeight * cardHeight + (problemHeight - 1) * cardPadding;
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    let center = {
+    let boardWidth = problemWidth * cardWidth + (problemWidth - 1) * cardPadding;
+    let boardHeight = problemHeight * cardHeight + (problemHeight - 1) * cardPadding;
+    ctx.canvas.width = margin * 2 + boardWidth;
+    ctx.canvas.height = margin * 2 + boardHeight;
+    center = {
         x: ctx.canvas.width * .5,
         y: ctx.canvas.height * .5
     };
-    let boardWidth = problemWidth * cardWidth + (problemWidth - 1) * cardPadding;
-    let boardHeight = problemHeight * cardHeight + (problemHeight - 1) * cardPadding;
-    let topLeft = {
+    topLeft = {
         x: center.x - boardWidth * .5,
         y: center.y - boardHeight * .5
     };
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     for (let i = 0; i < board.length; i++) {
         for (let j = 0; j < board[i].length; j++) {
             if (board[i][j] == 0)
@@ -92,6 +94,44 @@ function drawBoard(board) {
             drawText(board[i][j].toString(), { x: topLeft.x + cardWidth * .5 + (cardWidth + cardPadding) * j, y: topLeft.y + cardHeight * .5 + (cardHeight + cardPadding) * i }, 'white', 'arial', 32);
         }
     }
+}
+function drawAnimatedBoard(start, finish) {
+    return __awaiter(this, void 0, void 0, function* () {
+        drawBoard(start.boardState);
+        let movingPieceStart = finish.position;
+        let movingPieceFinish = start.position;
+        let frameCount = 15;
+        let currentFrame = 0;
+        let movingStepX = (movingPieceFinish.x - movingPieceStart.x) / frameCount;
+        let movingStepY = (movingPieceFinish.y - movingPieceStart.y) / frameCount;
+        let currentX = movingPieceStart.x;
+        let currentY = movingPieceStart.y;
+        let rect = {
+            x: topLeft.x + (cardWidth + cardPadding) * currentX,
+            y: topLeft.y + (cardHeight + cardPadding) * currentY,
+            w: cardWidth,
+            h: cardHeight
+        };
+        let number = start.boardState[finish.position.y][finish.position.x].toString();
+        while (currentFrame < frameCount) {
+            currentFrame++;
+            ctx.clearRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4);
+            currentX += movingStepX;
+            currentY += movingStepY;
+            rect = {
+                x: topLeft.x + (cardWidth + cardPadding) * currentX,
+                y: topLeft.y + (cardHeight + cardPadding) * currentY,
+                w: cardWidth,
+                h: cardHeight
+            };
+            drawHollowRect(rect, 'white', 2);
+            drawText(number, {
+                x: topLeft.x + cardWidth * .5 + (cardWidth + cardPadding) * currentX,
+                y: topLeft.y + cardHeight * .5 + (cardHeight + cardPadding) * currentY
+            }, 'white', 'arial', 32);
+            yield sleep(16);
+        }
+    });
 }
 function updateInitialState() {
     initialState = [];
@@ -330,9 +370,9 @@ function solveByAStar() {
         }
     }
     nodeCount = closedList.size + openList.length;
-    solution = [smallestNode.boardState];
+    solution = [smallestNode];
     while (smallestNode.parent) {
-        solution = [smallestNode.parent.boardState].concat(solution);
+        solution = [smallestNode.parent].concat(solution);
         smallestNode = smallestNode.parent;
     }
 }
@@ -434,8 +474,8 @@ function solve() {
         document.getElementById("elapsedTime").innerHTML = elapsedTime + ' ms';
         document.getElementById("nodeGenerated").innerHTML = nodeCount.toString();
         if (!isTimeout) {
-            for (let k = 1; k < solution.length; k++) {
-                drawBoard(solution[k]);
+            for (let k = 0; k < solution.length - 1; k++) {
+                yield drawAnimatedBoard(solution[k], solution[k + 1]);
                 yield sleep(200);
             }
         }
