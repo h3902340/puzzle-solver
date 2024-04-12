@@ -154,6 +154,36 @@ function createSolvedState() {
     }
     rawArray[rawArray.length - 1] = 0;
 }
+function hardest1() {
+    if (isSolving)
+        return;
+    problemHeight = 3;
+    problemWidth = 3;
+    document.getElementById("problemHeight").value = problemHeight.toString();
+    document.getElementById("problemWidth").innerHTML = problemWidth.toString();
+    initialState = [
+        [8, 6, 7],
+        [2, 5, 4],
+        [3, 0, 1]
+    ];
+    drawBoard(initialState);
+    isSolved = false;
+}
+function hardest2() {
+    if (isSolving)
+        return;
+    problemHeight = 3;
+    problemWidth = 3;
+    document.getElementById("problemHeight").value = problemHeight.toString();
+    document.getElementById("problemWidth").innerHTML = problemWidth.toString();
+    initialState = [
+        [6, 4, 7],
+        [8, 5, 0],
+        [3, 2, 1]
+    ];
+    drawBoard(initialState);
+    isSolved = false;
+}
 function scramble() {
     if (isSolving)
         return;
