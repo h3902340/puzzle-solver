@@ -160,7 +160,7 @@ function hardest1() {
     problemHeight = 3;
     problemWidth = 3;
     document.getElementById("problemHeight").value = problemHeight.toString();
-    document.getElementById("problemWidth").innerHTML = problemWidth.toString();
+    document.getElementById("problemWidth").value = problemWidth.toString();
     initialState = [
         [8, 6, 7],
         [2, 5, 4],
@@ -175,7 +175,7 @@ function hardest2() {
     problemHeight = 3;
     problemWidth = 3;
     document.getElementById("problemHeight").value = problemHeight.toString();
-    document.getElementById("problemWidth").innerHTML = problemWidth.toString();
+    document.getElementById("problemWidth").value = problemWidth.toString();
     initialState = [
         [6, 4, 7],
         [8, 5, 0],
